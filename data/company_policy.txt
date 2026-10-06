@@ -1,0 +1,16 @@
+TECHCORP TECHNOLOGY JOINT STOCK COMPANY
+WARRANTY TERMS AND SERVICE PRICING POLICY (YEAR 2026)
+
+Section 1: Warranty Terms
+- All enterprise software products from TechCorp come with a 12-month technical warranty starting from the formal acceptance date.
+- Critical issue resolution (Severity 1) is guaranteed within 2 business hours, with 24/7 dedicated support available for Premium plan subscribers.
+- Warranty is voided if the system source code has been altered or tampered with by any third party without prior written approval from TechCorp.
+
+Section 2: Cloud & AI Engine Service Pricing
+- Starter Plan: $200/month. Includes up to 100,000 API requests/month, 10GB Vector Data storage, and standard Email support.
+- Business Plan: $600/month. Includes up to 1,000,000 API requests/month, 100GB Vector Data storage, and 24/7 priority support via Hotline and Telegram.
+- Enterprise Custom Plan: Starting from $2,000/month. Unlimited API requests, Dedicated Vector DB infrastructure, and custom AI model fine-tuning tailored to enterprise requirements.
+
+Section 3: Refund & Cancellation Policy
+- We offer a risk-free 14-day trial period. Clients are eligible for a 100% full refund within the first 14 days if the service fails to meet agreed SLA commitments.
+- After 14 days, contract cancellation requires a minimum 30-day advance notice. Early termination incurs a penalty fee equal to 20% of the remaining contract value.
