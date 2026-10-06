@@ -6,3 +6,4 @@ chromadb
 python-dotenv
 requests
 python-telegram-bot
+langchain-text-splitters
