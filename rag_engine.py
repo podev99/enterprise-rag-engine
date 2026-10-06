@@ -9,9 +9,6 @@ from vector_store import query_semantic_search
 # Load environment variables
 load_dotenv()
 
-# Initialize Gemini client
-client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
-
 
 def get_context_and_sources(user_query: str, top_k: int = 2) -> Tuple[str, List[dict]]:
     """Retrieves relevant context chunks and builds metadata sources from ChromaDB."""
@@ -40,11 +37,18 @@ def get_context_and_sources(user_query: str, top_k: int = 2) -> Tuple[str, List[
 def generate_rag_response(user_query: str, top_k: int = 2) -> Tuple[str, List[dict]]:
     """
     Generates a context-grounded response using Gemini API:
+    - Dynamically initializes GenAI client with GEMINI_API_KEY.
     - Applies strict System Instructions for guardrails.
     - Sets temperature=0.0 for maximum factual precision.
     - Disables Automatic Function Calling (AFC) to prevent SDK warnings.
-    - Returns response text alongside sources metadata.
+    - Tries multiple fallback Gemini models.
     """
+    api_key = os.getenv("GEMINI_API_KEY")
+    if not api_key:
+        raise ValueError("GEMINI_API_KEY environment variable is not set on the server.")
+
+    client = genai.Client(api_key=api_key)
+
     # Step 1: Retrieve Context and Sources
     context_str, sources = get_context_and_sources(user_query, top_k=top_k)
 
@@ -72,13 +76,17 @@ def generate_rag_response(user_query: str, top_k: int = 2) -> Tuple[str, List[di
         automatic_function_calling=types.AutomaticFunctionCallingConfig(disable=True),
     )
 
+    # Reliable fallback model list
     models_to_try = [
-        "gemini-3.8-flash",
-        "gemini-3-flash",
+        "gemini-2.5-flash",
+        "gemini-2.0-flash",
+        "gemini-1.5-flash",
         "gemini-flash-latest",
     ]
 
     response_text = ""
+    last_error = None
+
     for model_name in models_to_try:
         try:
             response = client.models.generate_content(
@@ -86,51 +94,15 @@ def generate_rag_response(user_query: str, top_k: int = 2) -> Tuple[str, List[di
                 contents=augmented_prompt,
                 config=config,
             )
-            response_text = response.text.strip()
-            break
+            if response and response.text:
+                response_text = response.text.strip()
+                break
         except Exception as e:
-            print(f"Warning: Model {model_name} failed: {e}")
+            last_error = e
+            print(f"[RAG Engine Warning] Model '{model_name}' failed: {e}")
             continue
 
     if not response_text:
-        raise RuntimeError("All Gemini models failed to process the RAG request.")
+        raise RuntimeError(f"All Gemini models failed to process the request. Last error: {last_error}")
 
     return response_text, sources
-
-
-def format_rag_output(user_query: str, answer: str, sources: List[dict]) -> str:
-    """Formats the answer with explicit Source Citations for terminal display."""
-    output = []
-    output.append(f"❓ QUESTION: {user_query}")
-    output.append("-" * 60)
-    output.append(f"🤖 ANSWER:\n{answer}")
-    output.append("-" * 60)
-
-    if "do not have enough information" in answer.lower():
-        output.append("📌 SOURCES: None (Out-of-Scope / Refused)")
-    else:
-        output.append("📌 SOURCES USED:")
-        for src in sources:
-            output.append(
-                f"   • File: {src['source']} | Chunk ID: {src['chunk_id']} (Distance: {src['distance']:.4f})"
-            )
-
-    return "\n".join(output)
-
-
-if __name__ == "__main__":
-    print("=== ENTERPRISE RAG ENGINE DEMO (WITH GUARDRAILS & SOURCES) ===\n")
-
-    # Scenario A: In-Scope Query
-    query_a = "What is the warranty period for TechCorp enterprise software and what is the SLA for Severity 1 issues?"
-    print(">>> RUNNING SCENARIO A (In-Scope Query)...")
-    answer_a, sources_a = generate_rag_response(query_a, top_k=2)
-    print(format_rag_output(query_a, answer_a, sources_a))
-
-    print("\n" + "=" * 70 + "\n")
-
-    # Scenario B: Out-of-Scope Query (Anti-Hallucination Guardrail Test)
-    query_b = "Does TechCorp offer special discount packages for university students?"
-    print(">>> RUNNING SCENARIO B (Out-of-Scope Query)...")
-    answer_b, sources_b = generate_rag_response(query_b, top_k=2)
-    print(format_rag_output(query_b, answer_b, sources_b))
